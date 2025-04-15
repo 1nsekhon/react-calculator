@@ -1,95 +1,171 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+"use client";
+import styles from "./page.css";
+import { useReducer } from "react";
+import DigitButton from "@/DigitButton";
+import OperationButton from "@/OperationButton";
 
-export default function Home() {
+export const ACTIONS = {
+  ADD_DIGIT: 'add digit',
+  CHOOSE_OPERATION: 'choose-operation',
+  CLEAR: 'clear',
+  DELETE_DIGIT: 'delete_digit',
+  EVALUATE: 'evaluate',
+}
+
+function evaluate ({currentOperand, previousOperand, operation }) {
+  const prev = parseFloat(previousOperand);
+  const curr = parseFloat(currentOperand);
+
+  if (isNaN(prev) || isNaN(curr))
+  {
+    return ""
+  }
+
+  let output = ""
+
+  switch(operation) {
+    case "+":
+      output = prev + curr;
+      break;
+    case "-":
+      output = prev - curr;
+      break;
+    case "*":
+      output = prev * curr;
+      break;
+    case "÷":
+      output = prev / curr;
+      break;
+  }
+
+  return output.toString();
+}
+
+const INTEGER_FORMATTER = Intl.NumberFormat("en-us", {
+  maximumFractionDigits: 0
+})
+
+function formatOperand (operand) {
+  if (operand == null) return
+    const [integer, decimal] = operand.split(".");
+    if (decimal == null) return INTEGER_FORMATTER.format(integer);
+    return `${INTEGER_FORMATTER.format(integer)}.${decimal}`
+  }
+
+function reducer(state, {type, payload}) {
+  switch(type) {
+    case ACTIONS.ADD_DIGIT:
+      if (state.overwrite == true) 
+        return {
+          ...state,
+          overwrite: false,
+          currentOperand: payload.digit,
+        }
+      if (payload.digit === "0" && state.currentOperand === "0") 
+        return state
+      if (payload.digit === "." && state.currentOperand.includes(".")) 
+        return state
+      return {
+        ...state,
+        currentOperand: `${state.currentOperand || ""}${payload.digit}`
+      }
+    
+    case ACTIONS.CLEAR:
+      return {}
+    
+    case ACTIONS.CHOOSE_OPERATION:
+      if (state.currentOperand == null && state.previousOperand == null )
+        return state
+
+      if (state.previousOperand == null) {
+        return {
+          ...state,
+          operation: payload.operation,
+          previousOperand: state.currentOperand,
+          currentOperand: null
+        }
+      }
+
+      if (state.currentOperand == null) {
+        return {
+          ...state,
+          operation: payload.operation
+        }
+      }
+
+      return {
+        ...state,
+        previousOperand: evaluate(state),
+        operation: payload.operation,
+        currentOperand: null
+      }
+    case ACTIONS.EVALUATE:
+      if (state.operation == null || state.currentOperand == null && state.previousOperand == null)
+      {
+        return state
+      }
+
+      return {
+        ...state,
+        overwrite: true,
+        previousOperand: null,
+        currentOperand: evaluate(state),
+        operation: null
+      }
+
+    case ACTIONS.DELETE_DIGIT:
+      if (state.currentOperand == null)
+        return state
+      if (state.overwrite) {
+        return {
+          ...state,
+          currentOperand: null, 
+          overwrite: false
+        }
+      }
+      if (state.currentOperand.length === 1) {
+        return {
+          ...state,
+          currentOperand: null
+        }
+      }
+      
+      return {
+        ...state,
+        currentOperand: state.currentOperand.slice(0,-1)
+      }
+
+
+  }
+}
+
+export default function App() {
+  const [{currentOperand, previousOperand, operation }, dispatch] = useReducer(reducer, {});
+
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol>
-          <li>
-            Get started by editing <code>src/app/page.js</code>.
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
-
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.secondary}
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className={styles.footer}>
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+    <div className="calculator-grid">
+      <div className="output">
+        <div className="previous-operand">{formatOperand(previousOperand)} {operation}</div>
+        <div className="current-operand">{formatOperand(currentOperand)}</div>
+      </div>
+      <button className="two-column" onClick={() => dispatch({type: ACTIONS.CLEAR})}>CLEAR</button>
+      <button onClick={() => dispatch({type: ACTIONS.DELETE_DIGIT})}>DEL</button>
+      <OperationButton operation="÷" dispatch={dispatch}/>
+      <DigitButton digit="1" dispatch={dispatch}/>
+      <DigitButton digit="2" dispatch={dispatch}/>
+      <DigitButton digit="3" dispatch={dispatch}/>
+      <OperationButton operation="*" dispatch={dispatch}/>
+      <DigitButton digit="4" dispatch={dispatch}/>
+      <DigitButton digit="5" dispatch={dispatch}/>
+      <DigitButton digit="6" dispatch={dispatch}/>
+      <OperationButton operation="+" dispatch={dispatch}/>
+      <DigitButton digit="7" dispatch={dispatch}/>
+      <DigitButton digit="8" dispatch={dispatch}/>
+      <DigitButton digit="9" dispatch={dispatch}/>
+      <OperationButton operation="-" dispatch={dispatch}/>
+      <DigitButton digit="." dispatch={dispatch}/>
+      <DigitButton digit="0" dispatch={dispatch}/>
+      <button className="two-column" onClick={() => dispatch({type: ACTIONS.EVALUATE})}>=</button>
     </div>
   );
 }
