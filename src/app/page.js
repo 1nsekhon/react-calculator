@@ -4,6 +4,11 @@ import { useReducer } from "react";
 import DigitButton from "@/DigitButton";
 import OperationButton from "@/OperationButton";
 
+/* 
+  allowing typing from keyboard 
+  history feature similar to microsoft calculator
+*/
+
 export const ACTIONS = {
   ADD_DIGIT: 'add digit',
   CHOOSE_OPERATION: 'choose-operation',
@@ -123,6 +128,7 @@ function reducer(state, {type, payload}) {
           overwrite: false
         }
       }
+      /* can't delete symbols */
       if (state.currentOperand.length === 1) {
         return {
           ...state,
