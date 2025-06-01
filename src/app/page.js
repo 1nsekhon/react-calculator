@@ -1,13 +1,8 @@
 "use client";
 import styles from "./page.css";
-import { useReducer } from "react";
+import { useReducer, useEffect } from "react";
 import DigitButton from "@/DigitButton";
 import OperationButton from "@/OperationButton";
-
-/* 
-  allowing typing from keyboard 
-  history feature similar to microsoft calculator
-*/
 
 export const ACTIONS = {
   ADD_DIGIT: 'add digit',
@@ -79,9 +74,11 @@ function reducer(state, {type, payload}) {
       return {}
     
     case ACTIONS.CHOOSE_OPERATION:
+      // if there are no numbers
       if (state.currentOperand == null && state.previousOperand == null )
         return state
 
+      // if the user put the first operand but not yet the second
       if (state.previousOperand == null) {
         return {
           ...state,
@@ -91,6 +88,7 @@ function reducer(state, {type, payload}) {
         }
       }
 
+      // if the user did not put anything for the first operand
       if (state.currentOperand == null) {
         return {
           ...state,
@@ -98,6 +96,7 @@ function reducer(state, {type, payload}) {
         }
       }
 
+      // default
       return {
         ...state,
         previousOperand: evaluate(state),
@@ -146,7 +145,47 @@ function reducer(state, {type, payload}) {
 }
 
 export default function App() {
+  console.log("App component rendered");
   const [{currentOperand, previousOperand, operation }, dispatch] = useReducer(reducer, {});
+  
+  useEffect(()=> {
+    const handleKeyDown = (event) => {
+      const key = event.key;
+      console.log("useEffect is running");
+      console.log(key);
+
+      // if the user types a digit
+      if (/^[0-9]$/.test(key))
+      {
+        dispatch({ type: ACTIONS.ADD_DIGIT, payload : {digit: key} })
+      }
+
+      else if (/^[+\-*/]$/.test(key))
+      {
+        dispatch({ type: ACTIONS.CHOOSE_OPERATION, payload : {operation: key} });
+      }
+
+      else if (key === "Enter")
+      {
+        dispatch({type: ACTIONS.EVALUATE});
+      }
+
+      else if (key === "Backspace")
+      {
+        dispatch({type: ACTIONS.DELETE_DIGIT})
+      }
+
+      else if (key === "Escape")
+      {
+        dispatch({type: ACTIONS.CLEAR})
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    }
+  }, []);
+
 
   return (
     <div className="calculator-grid">
